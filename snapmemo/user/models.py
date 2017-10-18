@@ -27,7 +27,6 @@ class UserManager(BaseUserManager):
 class Member(AbstractBaseUser, PermissionsMixin):
     username = models.EmailField(unique=True)
     password = models.CharField(blank=True, max_length=100)
-    token = models.CharField(max_length=100)
     access_key = models.CharField(blank=True, max_length=100)
     created_date = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
