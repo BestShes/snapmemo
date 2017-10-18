@@ -1,12 +1,16 @@
 from django.conf.urls import url, include
 from django.contrib import admin
 from rest_framework import routers
-from user.views import UserViewSet
+from user.views import UserViewSet, UserLoginViewSet
 
 router = routers.DefaultRouter()
 router.register(
     r'user',
     UserViewSet
+),
+router.register(
+    r'login',
+    UserLoginViewSet
 )
 
 urlpatterns = [
