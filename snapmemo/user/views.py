@@ -3,7 +3,7 @@ from rest_framework import permissions
 from rest_framework.viewsets import ModelViewSet
 
 from user.models import Member
-from user.serializer import UserViewSetSerializer
+from user.serializers import UserViewSetSerializer
 
 
 class UserViewSet(ModelViewSet):
