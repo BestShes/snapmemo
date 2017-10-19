@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, GenericViewSet
 
 from user.models import Member
-from user.serializers import UserViewSetSerializer, NormalUserLoginSerializer
+from user.serializers import UserViewSetSerializer, NormalUserLoginSerializer, UserLogoutSerializer
 
 
 class UserViewSet(ModelViewSet):
@@ -52,3 +52,16 @@ class UserLoginViewSet(CreateModelMixin,
             'user': serializer.data,
             'token': str(token)
         }, status=status.HTTP_200_OK, headers=headers)
+
+
+class UserLogoutViewSet(CreateModelMixin,
+                        GenericViewSet):
+    queryset = Member.objects.all()
+    serializer_class = UserLogoutSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def create(self, request, *args, **kwargs):
+        username = request.user.id
+        user_token = TokenModel.objects.get(user_id=username)
+        user_token.delete()
+        return Response(data={'detail': 'Logout Succeeded and Token Delete'}, status=status.HTTP_200_OK)

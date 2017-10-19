@@ -47,3 +47,7 @@ class NormalUserLoginSerializer(serializers.Serializer):
         if user_object is None:
             raise customexception.AuthenticateException('이메일 혹은 비밀번호를 확인해 주세요.')
         return user_object
+
+
+class UserLogoutSerializer(serializers.Serializer):
+    pass
