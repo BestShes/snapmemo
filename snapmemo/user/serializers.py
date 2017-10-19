@@ -1,6 +1,8 @@
+from django.contrib.auth import authenticate
 from rest_framework import serializers
 
 from user.models import Member
+from utils import customexception
 
 
 class UserViewSetSerializer(serializers.ModelSerializer):
@@ -27,3 +29,21 @@ class UserViewSetSerializer(serializers.ModelSerializer):
         user.save()
         return user
 
+
+class NormalUserLoginSerializer(serializers.Serializer):
+    username = serializers.EmailField()
+    password = serializers.CharField(min_length=8, write_only=True)
+
+    class Meta:
+        fields = (
+            'username',
+            'password'
+        )
+
+    def create(self, validated_data):
+        username = validated_data['username']
+        password = validated_data['password']
+        user_object = authenticate(username=username, password=password)
+        if user_object is None:
+            raise customexception.AuthenticateException('이메일 혹은 비밀번호를 확인해 주세요.')
+        return user_object
