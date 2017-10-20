@@ -8,13 +8,14 @@ from rest_framework.viewsets import ModelViewSet, GenericViewSet
 
 from user.models import Member
 from user.serializers import UserViewSetSerializer, NormalUserLoginSerializer, UserLogoutSerializer
+from utils import UserPermission
 
 
 class UserViewSet(ModelViewSet):
     queryset = Member.objects.all()
     serializer_class = UserViewSetSerializer
-    lookup_field = 'username'
-    permission_classes = (permissions.AllowAny,)
+    lookup_field = 'id'
+    permission_classes = (UserPermission,)
 
     def perform_create(self, serializer):
         user = serializer.save()
@@ -39,17 +40,18 @@ class UserLoginViewSet(CreateModelMixin,
     permission_classes = (permissions.AllowAny,)
 
     def perform_create(self, serializer):
-        user = serializer.save()
-        token = create_token(TokenModel, user, NormalUserLoginSerializer)
-        return token
+        user_object = serializer.save()
+        user = UserViewSetSerializer(user_object)
+        token = create_token(TokenModel, user_object, NormalUserLoginSerializer)
+        return user, token
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        token = self.perform_create(serializer)
+        user, token = self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response(data={
-            'user': serializer.data,
+            'user': user.data,
             'token': str(token)
         }, status=status.HTTP_200_OK, headers=headers)
 

@@ -8,15 +8,20 @@ from utils import customexception
 class UserViewSetSerializer(serializers.ModelSerializer):
     password = serializers.CharField(min_length=8, required=False, write_only=True)
     access_key = serializers.CharField(required=False, write_only=True)
+    current_password = serializers.CharField(min_length=8, required=False, write_only=True)
+    modify_password = serializers.CharField(min_length=8, required=False, write_only=True)
 
     class Meta:
         model = Member
         fields = (
+            'id',
             'username',
             'password',
             'user_type',
             'access_key',
             'created_date',
+            'current_password',
+            'modify_password'
         )
 
     def create(self, validated_data):
@@ -28,6 +33,17 @@ class UserViewSetSerializer(serializers.ModelSerializer):
             pass
         user.save()
         return user
+
+    def update(self, instance, validated_data):
+        current_password = validated_data['current_password']
+        modify_password = validated_data['modify_password']
+        user_object = authenticate(username=instance.username, password=current_password)
+        if user_object is None:
+            raise customexception.ValidationException('패스워드가 정확하지 않습니다')
+        else:
+            user_object.set_password(modify_password)
+            user_object.save()
+        return user_object
 
 
 class NormalUserLoginSerializer(serializers.Serializer):
