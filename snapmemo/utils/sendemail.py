@@ -1,11 +1,11 @@
 from django.core.mail import send_mail
 
 __all__ = (
-    'CertificationMail',
+    'SendMail',
 )
 
 
-class CertificationMail:
+class SendMail:
     @staticmethod
     def certification_mail(email, message):
         send_mail(
