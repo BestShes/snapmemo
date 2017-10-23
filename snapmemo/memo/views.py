@@ -1,3 +1,4 @@
+from rest_framework import filters
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.response import Response
@@ -25,11 +26,14 @@ class MemoViewSet(ModelViewSet):
     serializer_class = MemoSerializer
     queryset = Memo.objects.all()
     lookup_field = 'id'
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('title', 'content')
     permission_classes = (CategoryPermission,)
 
     def list(self, request, *args, **kwargs):
         user_id = request.user.id
-        queryset = Memo.objects.filter(user_id=user_id)
+        list_queryset = Memo.objects.filter(user_id=user_id)
+        queryset = self.filter_queryset(list_queryset)
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
