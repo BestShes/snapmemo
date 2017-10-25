@@ -7,7 +7,8 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, GenericViewSet
 
 from user.models import Member
-from user.serializers import UserViewSetSerializer, NormalUserLoginSerializer, UserLogoutSerializer
+from user.serializers import UserViewSetSerializer, NormalUserLoginSerializer, UserLogoutSerializer, \
+    FacebookUserSerializer
 from utils import UserPermission
 
 
@@ -16,6 +17,13 @@ class UserViewSet(ModelViewSet):
     serializer_class = UserViewSetSerializer
     lookup_field = 'id'
     permission_classes = (UserPermission,)
+
+    def get_serializer_class(self):
+        user_type = self.request.POST['user_type']
+        if user_type == 'normal':
+            return self.serializer_class
+        elif user_type == 'facebook':
+            return FacebookUserSerializer
 
     def perform_create(self, serializer):
         user = serializer.save()
