@@ -45,7 +45,7 @@ class UserViewSet(ModelViewSet):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        token = self.perform_create(serializer)
+        _, token = self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response(data={
             'user': serializer.data,
