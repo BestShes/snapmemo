@@ -8,7 +8,8 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
 from user.models import Member
-from user.serializers import UserViewSetSerializer, NormalUserLoginSerializer, FacebookUserSerializer
+from user.serializers import UserViewSetSerializer, NormalUserLoginSerializer, FacebookUserSerializer, \
+    SocialUserLoginSerializer
 from utils import UserPermission
 
 
@@ -31,6 +32,8 @@ class UserViewSet(ModelViewSet):
                 return self.serializer_class
             elif action == 'login':
                 return NormalUserLoginSerializer
+            elif action == 'social_login':
+                return SocialUserLoginSerializer
 
         return self.serializer_class
 
@@ -53,7 +56,18 @@ class UserViewSet(ModelViewSet):
     def login(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        print(serializer)
+        user_object, token = self.perform_create(serializer)
+        user = UserViewSetSerializer(user_object)
+        headers = self.get_success_headers(serializer.data)
+        return Response(data={
+            'user': user.data,
+            'token': str(token)
+        }, status=status.HTTP_200_OK, headers=headers)
+
+    @list_route(methods=['post'], permission_classes=[permissions.AllowAny])
+    def social_login(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         user_object, token = self.perform_create(serializer)
         user = UserViewSetSerializer(user_object)
         headers = self.get_success_headers(serializer.data)

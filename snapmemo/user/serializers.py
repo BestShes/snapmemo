@@ -1,5 +1,7 @@
 from django.contrib.auth import authenticate
+from django.db import IntegrityError
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 
 from user.models import Member
 from utils import customexception
@@ -7,7 +9,8 @@ from utils.validation import CheckSocialAccessToken
 
 
 class UserViewSetSerializer(serializers.ModelSerializer):
-    username = serializers.EmailField(max_length=50, required=True)
+    username = serializers.EmailField(max_length=50, required=True,
+                                      validators=[UniqueValidator(queryset=Member.objects.all())])
     password = serializers.CharField(min_length=8, required=False, write_only=True)
     access_key = serializers.CharField(required=False, write_only=True)
     current_password = serializers.CharField(min_length=8, required=False, write_only=True)
@@ -49,7 +52,8 @@ class UserViewSetSerializer(serializers.ModelSerializer):
 
 
 class FacebookUserSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(max_length=260, required=False)
+    username = serializers.CharField(max_length=260, required=False,
+                                     validators=[UniqueValidator(queryset=Member.objects.all())])
     password = serializers.CharField(required=False, write_only=True)
     access_key = serializers.CharField(required=True, write_only=True)
 
@@ -67,13 +71,16 @@ class FacebookUserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         access_token = validated_data['access_key']
         username = CheckSocialAccessToken.check_facebook(access_token)
-        user_object = Member(username=username, **validated_data)
-        user_object.save()
+        try:
+            user_object = Member(username=username, **validated_data)
+            user_object.save()
+        except IntegrityError:
+            raise customexception.ValidationException('해당 유저가 이미 존재합니다')
         return user_object
 
 
 class NormalUserLoginSerializer(serializers.Serializer):
-    username = serializers.EmailField()
+    username = serializers.EmailField(required=True, validators=[UniqueValidator(queryset=Member.objects.all())])
     password = serializers.CharField(min_length=8, write_only=True)
 
     class Meta:
@@ -91,5 +98,16 @@ class NormalUserLoginSerializer(serializers.Serializer):
         return user_object
 
 
-class UserLogoutSerializer(serializers.Serializer):
-    pass
+class SocialUserLoginSerializer(serializers.Serializer):
+    access_key = serializers.CharField(max_length=260, write_only=True, required=True)
+
+    class Meta:
+        fields = (
+            'access_key',
+        )
+
+    def create(self, validated_data):
+        access_key = validated_data['access_key']
+        username = CheckSocialAccessToken.check_facebook(access_key)
+        user_object = Member.objects.get(username=username)
+        return user_object
