@@ -11,7 +11,7 @@ from utils.validation import CheckSocialAccessToken
 class UserViewSetSerializer(serializers.ModelSerializer):
     username = serializers.EmailField(max_length=50, required=True,
                                       validators=[UniqueValidator(queryset=Member.objects.all())])
-    password = serializers.CharField(min_length=8, required=False, write_only=True)
+    password = serializers.CharField(min_length=8, required=True, write_only=True)
     access_key = serializers.CharField(required=False, write_only=True)
     current_password = serializers.CharField(min_length=8, required=False, write_only=True)
     modify_password = serializers.CharField(min_length=8, required=False, write_only=True)
@@ -30,12 +30,9 @@ class UserViewSetSerializer(serializers.ModelSerializer):
         )
 
     def create(self, validated_data):
+        password = validated_data.pop('password')
         user = Member(**validated_data)
-        try:
-            password = validated_data.pop('password')
-            user.set_password(password)
-        except KeyError:
-            pass
+        user.set_password(password)
         user.save()
         return user
 
@@ -80,8 +77,8 @@ class FacebookUserSerializer(serializers.ModelSerializer):
 
 
 class NormalUserLoginSerializer(serializers.Serializer):
-    username = serializers.EmailField(required=True, validators=[UniqueValidator(queryset=Member.objects.all())])
-    password = serializers.CharField(min_length=8, write_only=True)
+    username = serializers.EmailField(required=True, max_length=50)
+    password = serializers.CharField(min_length=8, write_only=True, required=True)
 
     class Meta:
         fields = (

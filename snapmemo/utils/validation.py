@@ -16,8 +16,8 @@ class CheckSocialAccessToken():
         response = requests.get(url, params=param)
         response_dict = response.json()
         is_valid = response_dict['data']['is_valid']
-        username = response_dict['data']['user_id']
         if is_valid:
+            username = response_dict['data']['user_id']
             return username
         else:
             raise customexception.AuthenticateException('Invalid Access Token')
