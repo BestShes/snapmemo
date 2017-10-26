@@ -29,10 +29,10 @@ class Member(AbstractBaseUser, PermissionsMixin):
         ('normal', 'Normal'),
         ('facebook', 'Facebook'),
     )
-    username = models.EmailField(unique=True)
+    username = models.CharField(unique=True, max_length=50)
     password = models.CharField(blank=True, max_length=100)
     user_type = models.CharField(choices=USER_TYPE, default='normal', max_length=10)
-    access_key = models.CharField(blank=True, max_length=100)
+    access_key = models.CharField(blank=True, max_length=260)
     created_date = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
 
