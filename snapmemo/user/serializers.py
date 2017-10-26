@@ -72,8 +72,6 @@ class FacebookUserSerializer(serializers.ModelSerializer):
         return user_object
 
 
-
-
 class NormalUserLoginSerializer(serializers.Serializer):
     username = serializers.EmailField()
     password = serializers.CharField(min_length=8, write_only=True)
