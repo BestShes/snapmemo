@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'rest_auth',
+    'storages',
     'user',
     'memo'
 ]
@@ -53,6 +54,27 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
+# S3 Settings
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+AWS_ACCESS_KEY_ID = COMMON_CONF_FILE['aws']['access-key-id']
+AWS_SECRET_ACCESS_KEY = COMMON_CONF_FILE['aws']['secret-access-key']
+AWS_STORAGE_BUCKET_NAME = 'pemo'
+MEDIAFILES_LOCATION = 'MEDIA_S3_DIR'
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=86400',
+}
+AWS_LOCATION = 'static'
+
+MEDIA_URL = 'https://%s/MEDIA_DIR/' % AWS_S3_CUSTOM_DOMAIN
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'snapmemo/static'),
+]
+STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, AWS_LOCATION)
+STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -62,6 +84,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# Media Settings
+MEDIA_ROOT = os.path.join(BASE_DIR, 'upload')
 
 ROOT_URLCONF = 'snapmemo.urls'
 

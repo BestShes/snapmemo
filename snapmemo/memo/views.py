@@ -33,7 +33,7 @@ class MemoViewSet(ModelViewSet):
     def list(self, request, *args, **kwargs):
         user_id = request.user.id
         list_queryset = Memo.objects.filter(user_id=user_id)
-        queryset = self.filter_queryset(list_queryset)
+        queryset = self.filter_queryset(list_queryset).order_by('-id')
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
