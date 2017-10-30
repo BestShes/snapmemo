@@ -7,6 +7,8 @@ from utils.customexception import ValidationException
 
 class MemoSerializer(ModelSerializer):
     category_id = serializers.IntegerField(required=False)
+    created_date = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S')
+    modified_date = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S')
 
     class Meta:
         model = Memo
@@ -38,6 +40,8 @@ class CategorySerializer(ModelSerializer):
     title = serializers.CharField(max_length=100, required=False)
     modify_title = serializers.CharField(max_length=100, write_only=True, required=False)
     memo_count = serializers.SerializerMethodField()
+    created_date = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S')
+    modified_date = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S')
 
     class Meta:
         model = Category
