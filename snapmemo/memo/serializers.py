@@ -6,7 +6,7 @@ from utils.customexception import ValidationException
 
 
 class MemoSerializer(ModelSerializer):
-    category_id = serializers.IntegerField(required=False, default=1)
+    category_id = serializers.IntegerField(required=False)
 
     class Meta:
         model = Memo
@@ -23,7 +23,12 @@ class MemoSerializer(ModelSerializer):
 
     def create(self, validated_data):
         user_id = self.context['request'].user.id
-        memo = Memo(user_id=user_id, **validated_data)
+        try:
+            category_id = validated_data['category_id']
+        except KeyError:
+            category = Category.objects.get_or_create(user_id=user_id, title='Default Directory')
+            category_id = category[0].id
+        memo = Memo(user_id=user_id, category_id=category_id, **validated_data)
         memo.save()
         return memo
 
