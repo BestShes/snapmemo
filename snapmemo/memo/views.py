@@ -17,7 +17,7 @@ class CategoryViewSet(ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         user_id = request.user.id
-        queryset = Category.objects.filter(user_id=user_id)
+        queryset = Category.objects.filter(user_id=user_id).order_by('-id')
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
