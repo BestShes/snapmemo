@@ -6,7 +6,7 @@ from utils.customexception import ValidationException
 
 
 class MemoSerializer(ModelSerializer):
-    category_id = serializers.IntegerField(required=False, default=1)
+    category_id = serializers.IntegerField(required=False)
 
     class Meta:
         model = Memo
@@ -16,12 +16,19 @@ class MemoSerializer(ModelSerializer):
             'title',
             'content',
             'image',
-            'category_id'
+            'category_id',
+            'created_date',
+            'modified_date'
         )
 
     def create(self, validated_data):
         user_id = self.context['request'].user.id
-        memo = Memo(user_id=user_id, **validated_data)
+        try:
+            category_id = validated_data['category_id']
+        except KeyError:
+            category = Category.objects.get_or_create(user_id=user_id, title='Default Directory')
+            category_id = category[0].id
+        memo = Memo(user_id=user_id, category_id=category_id, **validated_data)
         memo.save()
         return memo
 
@@ -30,7 +37,7 @@ class CategorySerializer(ModelSerializer):
     id = serializers.IntegerField(read_only=True)
     title = serializers.CharField(max_length=100, required=False)
     modify_title = serializers.CharField(max_length=100, write_only=True, required=False)
-    memo = MemoSerializer(many=True, read_only=True, source='memo_set')
+    memo_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
@@ -39,7 +46,9 @@ class CategorySerializer(ModelSerializer):
             'id',
             'title',
             'modify_title',
-            'memo'
+            'created_date',
+            'modified_date',
+            'memo_count'
         )
 
     def create(self, validated_data):
@@ -62,3 +71,24 @@ class CategorySerializer(ModelSerializer):
         instance.title = modify_title
         instance.save()
         return instance
+
+    def get_memo_count(self, instance):
+        return Memo.objects.filter(category_id=instance.id).count()
+
+
+class CategoryRetrieveSerializer(CategorySerializer):
+    memo = MemoSerializer(many=True, read_only=True, source='memo_set')
+
+    class Meta:
+        model = Category
+
+        fields = (
+            'id',
+            'title',
+            'modify_title',
+            'created_date',
+            'modified_date',
+            'memo_count',
+            'memo'
+        )
+

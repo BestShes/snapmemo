@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
 from memo.models import Category, Memo
-from memo.serializers import CategorySerializer, MemoSerializer
+from memo.serializers import CategorySerializer, MemoSerializer, CategoryRetrieveSerializer
 from utils import CategoryPermission
 
 
@@ -14,6 +14,13 @@ class CategoryViewSet(ModelViewSet):
     queryset = Category.objects.all()
     lookup_field = 'id'
     permission_classes = (CategoryPermission,)
+
+    def get_serializer_class(self):
+        action = self.action
+        if action == 'retrieve':
+            return CategoryRetrieveSerializer
+        else:
+            return CategorySerializer
 
     def list(self, request, *args, **kwargs):
         user_id = request.user.id
