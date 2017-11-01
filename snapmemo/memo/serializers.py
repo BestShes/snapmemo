@@ -20,8 +20,21 @@ class MemoSerializer(ModelSerializer):
             'image',
             'category_id',
             'created_date',
-            'modified_date'
+            'modified_date',
         )
+
+    def update(self, instance, validated_data):
+        modify_image = validated_data.pop('image', None)
+        modify_content = validated_data.pop('content', '')
+        category_id = validated_data.pop('category_id', instance.category_id)
+        if Category.objects.filter(user_id=instance.user_id).filter(id=category_id).exists():
+            instance.content = modify_content
+            instance.image = modify_image
+            instance.category_id = category_id
+            instance.save()
+        else:
+            raise ValidationException('해당 카테고리에 대한 권한이 없습니다.')
+        return instance
 
     def create(self, validated_data):
         user_id = self.context['request'].user.id
