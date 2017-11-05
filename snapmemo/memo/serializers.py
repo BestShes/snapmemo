@@ -43,7 +43,7 @@ class MemoSerializer(ModelSerializer):
         if category_id is None:
             category = Category.objects.get_or_create(user_id=user_id, title='Default Directory')
             category_id = category[0].id
-        elif Category.objects.filter(user_id=user_id).filter(id=category_id).exists() == False:
+        elif not Category.objects.filter(user_id=user_id).filter(id=category_id).exists():
             raise ValidationException('해당 카테고리에 대한 권한이 없습니다.')
         memo = Memo(user_id=user_id, category_id=category_id, **validated_data)
         memo.save()
