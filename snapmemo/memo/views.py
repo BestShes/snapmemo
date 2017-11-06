@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
 from memo.models import Category, Memo
-from memo.serializers import CategorySerializer, MemoSerializer, CategoryRetrieveSerializer
+from memo.serializers import CategorySerializer, MemoSerializer, CategoryMemoNestedSerializer
 from utils import CategoryPermission
 
 
@@ -16,10 +16,11 @@ class CategoryViewSet(ModelViewSet):
 
     def get_serializer_class(self):
         action = self.action
-        if action == 'retrieve':
-            return CategoryRetrieveSerializer
+        user_agent = self.request.META['HTTP_USER_AGENT']
+        if (user_agent.find('iPhone') != -1 or user_agent.find('iPad') != -1) or action == 'retrieve':
+            return CategoryMemoNestedSerializer
         else:
-            return CategorySerializer
+            return self.serializer_class
 
     def list(self, request, *args, **kwargs):
         user_id = request.user.id
