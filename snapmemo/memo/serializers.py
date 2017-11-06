@@ -94,7 +94,7 @@ class CategorySerializer(ModelSerializer):
         return Memo.objects.filter(category_id=instance.id).count()
 
 
-class CategoryRetrieveSerializer(CategorySerializer):
+class CategoryMemoNestedSerializer(CategorySerializer):
     memo = MemoSerializer(many=True, read_only=True, source='memo_set')
 
     class Meta:
