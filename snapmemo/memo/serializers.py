@@ -77,7 +77,7 @@ class CategorySerializer(ModelSerializer):
             raise ValidationException('Title을 입력해 주세요.')
         if Category.objects.filter(user_id=user_id, title=title).exists():
             raise ValidationException('해당 디렉토리 명이 이미 존재합니다.')
-        category = Category(user_id=user_id, **validated_data)
+        category = Category(user_id=user_id, title=title, **validated_data)
         category.save()
         return category
 
