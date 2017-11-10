@@ -2,6 +2,9 @@ from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin, UserManager
 from django.db import models
 
+from memo.models import Category
+from snapmemo import settings
+
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None):
@@ -35,6 +38,8 @@ class Member(AbstractBaseUser, PermissionsMixin):
     access_key = models.CharField(blank=True, max_length=260)
     created_date = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    categories = models.ManyToManyField(Category, through='MemberCategory')
 
     objects = UserManager()
 
@@ -55,3 +60,9 @@ class Member(AbstractBaseUser, PermissionsMixin):
 
     def has_module_perms(self, app_label):
         return True
+
+
+class MemberCategory(models.Model):
+    member = models.ForeignKey(settings.AUTH_USER_MODEL)
+    category = models.ForeignKey(Category)
+    created_date = models.DateTimeField(auto_now_add=True)
