@@ -6,6 +6,7 @@ from rest_framework.viewsets import ModelViewSet
 from memo.models import Category, Memo
 from memo.serializers import CategorySerializer, MemoSerializer, CategoryMemoNestedSerializer
 from utils import CategoryPermission, MemoPermission
+from utils.customexception import ValidationException
 
 
 class CategoryViewSet(ModelViewSet):
@@ -27,6 +28,12 @@ class CategoryViewSet(ModelViewSet):
         queryset = Category.objects.filter(member=user_id)
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+    def perform_destroy(self, instance):
+        if instance.id == 0:
+            raise ValidationException('기본 폴더는 삭제 할 수 없습니다.')
+        else:
+            instance.delete()
 
 
 class MemoViewSet(ModelViewSet):
