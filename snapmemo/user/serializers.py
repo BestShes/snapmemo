@@ -3,7 +3,8 @@ from django.db import IntegrityError
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
-from user.models import Member
+from memo.models import Category
+from user.models import Member, MemberCategory
 from utils import customexception
 from utils.validation import CheckSocialAccessToken
 
@@ -31,9 +32,11 @@ class UserViewSetSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop('password')
+        default_category = Category.objects.get(id=0)
         user = Member(**validated_data)
         user.set_password(password)
         user.save()
+        MemberCategory.objects.create(member=user, category=default_category)
         return user
 
     def update(self, instance, validated_data):

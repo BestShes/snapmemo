@@ -7,10 +7,12 @@ def memo_directory_path(instance, filename):
 
 
 class Category(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL)
     title = models.CharField(max_length=100)
     created_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.title
 
 
 class Memo(models.Model):
@@ -21,3 +23,6 @@ class Memo(models.Model):
     image = models.ImageField(blank=True, upload_to=memo_directory_path)
     created_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.title

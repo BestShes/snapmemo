@@ -5,7 +5,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from memo.models import Category, Memo
 from memo.serializers import CategorySerializer, MemoSerializer, CategoryMemoNestedSerializer
-from utils import CategoryPermission
+from utils import CategoryPermission, MemoPermission
 
 
 class CategoryViewSet(ModelViewSet):
@@ -24,7 +24,7 @@ class CategoryViewSet(ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         user_id = request.user.id
-        queryset = Category.objects.filter(user_id=user_id).order_by('-id')
+        queryset = Category.objects.filter(member=user_id)
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -35,7 +35,7 @@ class MemoViewSet(ModelViewSet):
     lookup_field = 'id'
     filter_backends = (filters.SearchFilter,)
     search_fields = ('title', 'content')
-    permission_classes = (CategoryPermission,)
+    permission_classes = (MemoPermission,)
 
     def list(self, request, *args, **kwargs):
         user_id = request.user.id

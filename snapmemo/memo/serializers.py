@@ -2,11 +2,12 @@ from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
 from memo.models import Category, Memo
+from user.models import MemberCategory
 from utils.customexception import ValidationException
 
 
 class MemoSerializer(ModelSerializer):
-    category_id = serializers.IntegerField(required=False)
+    category_id = serializers.IntegerField(required=False, default=0)
     created_date = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S', read_only=True)
     modified_date = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S', read_only=True)
     image = serializers.ImageField(allow_null=True)
@@ -25,10 +26,11 @@ class MemoSerializer(ModelSerializer):
         )
 
     def update(self, instance, validated_data):
+        user = self.context['request'].user
         modify_image = validated_data.pop('image', instance.image)
         modify_content = validated_data.pop('content', '')
         category_id = validated_data.pop('category_id', instance.category_id)
-        if Category.objects.filter(user_id=instance.user_id).filter(id=category_id).exists():
+        if user.categories.filter(id=category_id).exists():
             instance.content = modify_content
             instance.image = modify_image
             instance.category_id = category_id
@@ -38,14 +40,11 @@ class MemoSerializer(ModelSerializer):
         return instance
 
     def create(self, validated_data):
-        user_id = self.context['request'].user.id
-        category_id = validated_data.pop('category_id', None)
-        if category_id is None:
-            category = Category.objects.get_or_create(user_id=user_id, title='Default Directory')
-            category_id = category[0].id
-        elif not Category.objects.filter(user_id=user_id).filter(id=category_id).exists():
+        user = self.context['request'].user
+        category_id = validated_data.pop('category_id', 0)
+        if not user.categories.filter(id=category_id).exists():
             raise ValidationException('해당 카테고리에 대한 권한이 없습니다.')
-        memo = Memo(user_id=user_id, category_id=category_id, **validated_data)
+        memo = Memo(user_id=user.id, category_id=category_id, **validated_data)
         memo.save()
         return memo
 
@@ -71,14 +70,14 @@ class CategorySerializer(ModelSerializer):
         )
 
     def create(self, validated_data):
-        user_id = self.context['request'].user.id
+        user = self.context['request'].user
         title = validated_data.pop('title', None)
         if title is None:
             raise ValidationException('Title을 입력해 주세요.')
-        if Category.objects.filter(user_id=user_id, title=title).exists():
+        if user.categories.filter(title=title).exists():
             raise ValidationException('해당 디렉토리 명이 이미 존재합니다.')
-        category = Category(user_id=user_id, title=title, **validated_data)
-        category.save()
+        category = Category.objects.create(title=title)
+        MemberCategory.objects.create(member=user, category=category)
         return category
 
     def update(self, instance, validated_data):
@@ -89,13 +88,12 @@ class CategorySerializer(ModelSerializer):
         instance.save()
         return instance
 
-    @staticmethod
-    def get_memo_count(instance):
-        return Memo.objects.filter(category_id=instance.id).count()
+    def get_memo_count(self, instance):
+        return instance.memo_set.filter(user_id=self.context['request'].user.id).count()
 
 
 class CategoryMemoNestedSerializer(CategorySerializer):
-    memo = MemoSerializer(many=True, read_only=True, source='memo_set')
+    memo = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
@@ -109,3 +107,9 @@ class CategoryMemoNestedSerializer(CategorySerializer):
             'memo_count',
             'memo'
         )
+
+    def get_memo(self, obj):
+        user = self.context['request'].user
+        data = obj.memo_set.filter(user_id=user.id)
+        serializer = MemoSerializer(data, many=True)
+        return serializer.data
