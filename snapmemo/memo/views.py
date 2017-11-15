@@ -1,5 +1,6 @@
 from rest_framework import filters
 from rest_framework import status
+from rest_framework.decorators import list_route, detail_route
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
@@ -59,3 +60,32 @@ class MemoViewSet(ModelViewSet):
         return Response(data={
             'memo': serializer.data,
         }, status=status.HTTP_201_CREATED, headers=headers)
+
+    @list_route(methods=['get'])
+    def publish(self, request):
+        memo_list = Memo.objects.filter(published=True)
+        memo = MemoSerializer(memo_list, many=True)
+        headers = self.get_success_headers(memo.data)
+        return Response(data={
+            'memo': memo.data,
+        }, status=status.HTTP_200_OK, headers=headers)
+
+    @detail_route(methods=['get', 'post'])
+    def published(self, request, id):
+        memo_object = self.get_object()
+        if request.method == 'GET':
+            if memo_object.published:
+                memo = MemoSerializer(memo_object)
+                headers = self.get_success_headers(memo.data)
+                return Response(memo.data, status=status.HTTP_200_OK, headers=headers)
+            else:
+                raise ValidationException('이 메모는 공개되어 있지 않습니다.')
+        else:
+            if memo_object.published:
+                memo_object.published = False
+            else:
+                memo_object.published = True
+            memo_object.save()
+            memo = MemoSerializer(memo_object)
+            headers = self.get_success_headers(memo.data)
+            return Response(memo.data, status=status.HTTP_200_OK, headers=headers)

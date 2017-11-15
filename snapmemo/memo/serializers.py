@@ -11,6 +11,7 @@ class MemoSerializer(ModelSerializer):
     created_date = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S', read_only=True)
     modified_date = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S', read_only=True)
     image = serializers.ImageField(allow_null=True)
+    username = serializers.SerializerMethodField()
 
     class Meta:
         model = Memo
@@ -18,11 +19,13 @@ class MemoSerializer(ModelSerializer):
         fields = (
             'id',
             'title',
+            'username',
             'content',
             'image',
             'category_id',
             'created_date',
             'modified_date',
+            'published',
         )
 
     def update(self, instance, validated_data):
@@ -48,6 +51,9 @@ class MemoSerializer(ModelSerializer):
         memo.save()
         return memo
 
+    def get_username(self, instance):
+        return instance.user.username
+
 
 class CategorySerializer(ModelSerializer):
     id = serializers.IntegerField(read_only=True)
@@ -66,7 +72,7 @@ class CategorySerializer(ModelSerializer):
             'modify_title',
             'created_date',
             'modified_date',
-            'memo_count'
+            'memo_count',
         )
 
     def create(self, validated_data):
@@ -108,8 +114,8 @@ class CategoryMemoNestedSerializer(CategorySerializer):
             'memo'
         )
 
-    def get_memo(self, obj):
+    def get_memo(self, instance):
         user = self.context['request'].user
-        data = obj.memo_set.filter(user_id=user.id)
+        data = instance.memo_set.filter(user_id=user.id)
         serializer = MemoSerializer(data, many=True)
         return serializer.data

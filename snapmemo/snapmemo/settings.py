@@ -49,13 +49,13 @@ REST_FRAMEWORK = {
 }
 
 # Send Email Settings
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = "smtp.gmail.com"
-EMAIL_HOST_USER = 'myrecordemail16@gmail.com'
-EMAIL_HOST_PASSWORD = 'myrecordemail'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+EMAIL_BACKEND = COMMON_CONF_FILE['django']['email']['EMAIL_BACKEND']
+EMAIL_HOST = COMMON_CONF_FILE['django']['email']['EMAIL_HOST']
+EMAIL_HOST_USER = COMMON_CONF_FILE['django']['email']['EMAIL_HOST_USER']
+EMAIL_HOST_PASSWORD = COMMON_CONF_FILE['django']['email']['EMAIL_HOST_PASSWORD']
+EMAIL_PORT = COMMON_CONF_FILE['django']['email']['EMAIL_PORT']
+EMAIL_USE_TLS = COMMON_CONF_FILE['django']['email']['EMAIL_USE_TLS']
+DEFAULT_FROM_EMAIL = COMMON_CONF_FILE['django']['email']['DEFAULT_FROM_EMAIL']
 
 # S3 Settings
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
@@ -154,7 +154,7 @@ USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = True
+USE_TZ = False
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.11/howto/static-files/
