@@ -5,7 +5,8 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
 from memo.models import Category, Memo
-from memo.serializers import CategorySerializer, MemoSerializer, CategoryMemoNestedSerializer
+from memo.serializers import CategorySerializer, MemoSerializer, CategoryMemoNestedSerializer, \
+    MultipleMemoChangeCategory
 from utils import CategoryPermission, MemoPermission
 from utils.customexception import ValidationException
 
@@ -45,6 +46,13 @@ class MemoViewSet(ModelViewSet):
     search_fields = ('title', 'content')
     permission_classes = (MemoPermission,)
 
+    def get_serializer_class(self):
+        action = self.action
+        if action == 'category':
+            return MultipleMemoChangeCategory
+        else:
+            return self.serializer_class
+
     def list(self, request, *args, **kwargs):
         user_id = request.user.id
         list_queryset = Memo.objects.filter(user_id=user_id)
@@ -69,6 +77,16 @@ class MemoViewSet(ModelViewSet):
         return Response(data={
             'memo': memo.data,
         }, status=status.HTTP_200_OK, headers=headers)
+
+    @list_route(methods=['patch'])
+    def category(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        memo_objects = serializer.save()
+        memo = MemoSerializer(memo_objects, many=True)
+        return Response(data={
+            'memo': memo.data
+        }, status=status.HTTP_200_OK)
 
     @detail_route(methods=['get', 'post'])
     def published(self, request, id):
