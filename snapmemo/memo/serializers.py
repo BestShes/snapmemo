@@ -1,16 +1,17 @@
 from rest_framework import serializers
-from rest_framework.serializers import ModelSerializer
+from rest_framework.serializers import ModelSerializer, Serializer
 
 from memo.models import Category, Memo
 from user.models import MemberCategory
 from utils.customexception import ValidationException
+from drf_extra_fields.fields import Base64ImageField
 
 
 class MemoSerializer(ModelSerializer):
     category_id = serializers.IntegerField(required=False, default=0)
     created_date = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S', read_only=True)
     modified_date = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S', read_only=True)
-    image = serializers.ImageField(allow_null=True)
+    image = Base64ImageField()
     username = serializers.SerializerMethodField()
 
     class Meta:
@@ -53,6 +54,28 @@ class MemoSerializer(ModelSerializer):
 
     def get_username(self, instance):
         return instance.user.username
+
+
+class MultipleMemoChangeCategory(Serializer):
+    memo_id = serializers.ListField(child=serializers.IntegerField(), required=True)
+    category_id = serializers.IntegerField(required=True)
+
+    class Meta:
+        fields = (
+            'memo_id',
+            'category_id'
+        )
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        memo_id = validated_data.pop('memo_id')
+        category_id = validated_data.pop('category_id')
+        if user.categories.filter(id=category_id).exists():
+            memo_objects = user.memo_set.filter(id__in=memo_id)
+            memo_objects.update(category_id=category_id)
+        else:
+            raise ValidationException('해당 카테고리에 대한 권한이 없습니다.')
+        return memo_objects
 
 
 class CategorySerializer(ModelSerializer):
