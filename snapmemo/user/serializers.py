@@ -10,10 +10,6 @@ from utils.validation import CheckSocialAccessToken
 
 
 class UserViewSetSerializer(serializers.ModelSerializer):
-    username = serializers.EmailField(max_length=50, required=True,
-                                      validators=[UniqueValidator(queryset=Member.objects.all())])
-    password = serializers.CharField(min_length=8, required=True, write_only=True)
-    access_key = serializers.CharField(required=False, write_only=True)
     current_password = serializers.CharField(min_length=8, required=False, write_only=True)
     modify_password = serializers.CharField(min_length=8, required=False, write_only=True)
 
@@ -30,14 +26,39 @@ class UserViewSetSerializer(serializers.ModelSerializer):
             'modify_password'
         )
 
+        extra_kwargs = {
+            'username': {'max_length': 50, 'required': True,
+                         'validators': [UniqueValidator(queryset=Member.objects.all())]},
+            'password': {'min_length': 8, 'required': True, 'write_only': True},
+            'access_key': {'required': False, 'write_only': True}
+        }
+
+    def __init__(self, *args, **kwargs):
+        user_type = kwargs.pop('type', None)
+        super(UserViewSetSerializer, self).__init__(*args, **kwargs)
+
+        if user_type == 'facebook':
+            extra_kwargs = self.Meta.extra_kwargs
+            extra_kwargs['username']['required'] = False
+            extra_kwargs['password']['required'] = False
+            extra_kwargs['access_key']['required'] = True
+
     def create(self, validated_data):
-        password = validated_data.pop('password')
+        password = validated_data.pop('password', None)
+        access_key = validated_data.pop('access_key', None)
         default_category = Category.objects.get(id=0)
-        user = Member(**validated_data)
-        user.set_password(password)
-        user.save()
-        MemberCategory.objects.create(member=user, category=default_category)
-        return user
+        if access_key is None:
+            user_object = Member(**validated_data)
+            user_object.set_password(password)
+            user_object.save()
+        elif password is None:
+            username = CheckSocialAccessToken.check_facebook(access_key)
+            if Member.objects.filter(username=username).exists():
+                raise customexception.ValidationException('이미 존재하는 계정입니다.')
+            user_object = Member(username=username, **validated_data)
+            user_object.save()
+        MemberCategory.objects.create(member=user_object, category=default_category)
+        return user_object
 
     def update(self, instance, validated_data):
         current_password = validated_data['current_password']
@@ -48,34 +69,6 @@ class UserViewSetSerializer(serializers.ModelSerializer):
         else:
             user_object.set_password(modify_password)
             user_object.save()
-        return user_object
-
-
-class FacebookUserSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(max_length=260, required=False,
-                                     validators=[UniqueValidator(queryset=Member.objects.all())])
-    password = serializers.CharField(required=False, write_only=True)
-    access_key = serializers.CharField(required=True, write_only=True)
-
-    class Meta:
-        model = Member
-        fields = (
-            'id',
-            'username',
-            'password',
-            'user_type',
-            'access_key',
-            'created_date',
-        )
-
-    def create(self, validated_data):
-        access_token = validated_data['access_key']
-        username = CheckSocialAccessToken.check_facebook(access_token)
-        try:
-            user_object = Member(username=username, **validated_data)
-            user_object.save()
-        except IntegrityError:
-            raise customexception.ValidationException('해당 유저가 이미 존재합니다')
         return user_object
 
 

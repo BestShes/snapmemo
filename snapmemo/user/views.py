@@ -1,4 +1,3 @@
-from django.utils.datastructures import MultiValueDictKeyError
 from rest_auth.app_settings import create_token
 from rest_auth.models import TokenModel
 from rest_framework import permissions
@@ -8,8 +7,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
 from user.models import Member
-from user.serializers import UserViewSetSerializer, NormalUserLoginSerializer, FacebookUserSerializer, \
-    SocialUserLoginSerializer
+from user.serializers import UserViewSetSerializer, NormalUserLoginSerializer, SocialUserLoginSerializer
 from utils import UserPermission
 
 
@@ -21,20 +19,10 @@ class UserViewSet(ModelViewSet):
 
     def get_serializer_class(self):
         action = self.action
-        try:
-            user_type = self.request.POST['user_type']
-            if user_type == 'normal':
-                return self.serializer_class
-            elif user_type == 'facebook':
-                return FacebookUserSerializer
-        except MultiValueDictKeyError:
-            if action in ['list', 'retrieve', 'update', 'partial_update', 'destroy']:
-                return self.serializer_class
-            elif action == 'login':
-                return NormalUserLoginSerializer
-            elif action == 'social_login':
-                return SocialUserLoginSerializer
-
+        if action == 'login':
+            return NormalUserLoginSerializer
+        elif action == 'social_login':
+            return SocialUserLoginSerializer
         return self.serializer_class
 
     def perform_create(self, serializer):
@@ -43,7 +31,8 @@ class UserViewSet(ModelViewSet):
         return user_object, token
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        user_type = request.POST['user_type']
+        serializer = self.get_serializer(data=request.data, type=user_type)
         serializer.is_valid(raise_exception=True)
         _, token = self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
