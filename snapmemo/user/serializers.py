@@ -91,7 +91,7 @@ class UserLoginSerializer(serializers.Serializer):
         )
 
     def __init__(self, *args, **kwargs):
-        user_type = kwargs['data']['user_type']
+        user_type = kwargs['data'] if 'user_type' in kwargs['data'] else 'normal'
         fields = ('access_key',) if user_type == 'facebook' else ('username', 'password')
         super(UserLoginSerializer, self).__init__(*args, **kwargs)
         allow = set(fields)
