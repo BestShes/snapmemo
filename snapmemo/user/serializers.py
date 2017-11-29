@@ -34,7 +34,7 @@ class UserViewSetSerializer(serializers.ModelSerializer):
         }
 
     def __init__(self, *args, **kwargs):
-        user_type = kwargs.pop('type', None)
+        user_type = kwargs.pop('user_type', 'normal')
         super(UserViewSetSerializer, self).__init__(*args, **kwargs)
 
         if user_type == 'facebook':
@@ -44,14 +44,15 @@ class UserViewSetSerializer(serializers.ModelSerializer):
             extra_kwargs['access_key']['required'] = True
 
     def create(self, validated_data):
-        password = validated_data.pop('password', None)
-        access_key = validated_data.pop('access_key', None)
+        user_type = validated_data.get('user_type', 'normal')
         default_category = Category.objects.get(id=0)
-        if access_key is None:
+        if user_type == 'normal':
+            password = validated_data.pop('password')
             user_object = Member(**validated_data)
             user_object.set_password(password)
             user_object.save()
-        elif password is None:
+        elif user_type == 'facebook':
+            access_key = validated_data.pop('access_key')
             username = CheckSocialAccessToken.check_facebook(access_key)
             if Member.objects.filter(username=username).exists():
                 raise customexception.ValidationException('이미 존재하는 계정입니다.')
@@ -91,7 +92,7 @@ class UserLoginSerializer(serializers.Serializer):
         )
 
     def __init__(self, *args, **kwargs):
-        user_type = kwargs['data'] if 'user_type' in kwargs['data'] else 'normal'
+        user_type = kwargs.pop('user_type', 'normal')
         fields = ('access_key',) if user_type == 'facebook' else ('username', 'password')
         super(UserLoginSerializer, self).__init__(*args, **kwargs)
         allow = set(fields)

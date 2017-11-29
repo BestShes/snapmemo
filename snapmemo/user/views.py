@@ -29,8 +29,8 @@ class UserViewSet(ModelViewSet):
         return user_object, token
 
     def create(self, request, *args, **kwargs):
-        user_type = request.POST['user_type']
-        serializer = self.get_serializer(data=request.data, type=user_type)
+        user_type = request.data.get('user_type', 'normal')
+        serializer = self.get_serializer(data=request.data, user_type=user_type)
         serializer.is_valid(raise_exception=True)
         _, token = self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
@@ -41,10 +41,11 @@ class UserViewSet(ModelViewSet):
 
     @list_route(methods=['post'], permission_classes=[permissions.AllowAny])
     def login(self, request):
-        serializer = self.get_serializer(data=request.data)
+        user_type = request.data.get('user_type', 'normal')
+        serializer = self.get_serializer(data=request.data, user_type=user_type)
         serializer.is_valid(raise_exception=True)
         user_object, token = self.perform_create(serializer)
-        user = UserViewSetSerializer(user_object)
+        user = UserViewSetSerializer(user_object, user_type=user_type)
         headers = self.get_success_headers(serializer.data)
         return Response(data={
             'user': user.data,
