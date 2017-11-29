@@ -10,10 +10,6 @@ from utils.validation import CheckSocialAccessToken
 
 
 class UserViewSetSerializer(serializers.ModelSerializer):
-    username = serializers.EmailField(max_length=50, required=True,
-                                      validators=[UniqueValidator(queryset=Member.objects.all())])
-    password = serializers.CharField(min_length=8, required=True, write_only=True)
-    access_key = serializers.CharField(required=False, write_only=True)
     current_password = serializers.CharField(min_length=8, required=False, write_only=True)
     modify_password = serializers.CharField(min_length=8, required=False, write_only=True)
 
@@ -30,14 +26,40 @@ class UserViewSetSerializer(serializers.ModelSerializer):
             'modify_password'
         )
 
+        extra_kwargs = {
+            'username': {'max_length': 50, 'required': True,
+                         'validators': [UniqueValidator(queryset=Member.objects.all())]},
+            'password': {'min_length': 8, 'required': True, 'write_only': True},
+            'access_key': {'required': False, 'write_only': True}
+        }
+
+    def __init__(self, *args, **kwargs):
+        user_type = kwargs.pop('user_type', 'normal')
+        super(UserViewSetSerializer, self).__init__(*args, **kwargs)
+
+        if user_type == 'facebook':
+            extra_kwargs = self.Meta.extra_kwargs
+            extra_kwargs['username']['required'] = False
+            extra_kwargs['password']['required'] = False
+            extra_kwargs['access_key']['required'] = True
+
     def create(self, validated_data):
-        password = validated_data.pop('password')
+        user_type = validated_data.get('user_type', 'normal')
         default_category = Category.objects.get(id=0)
-        user = Member(**validated_data)
-        user.set_password(password)
-        user.save()
-        MemberCategory.objects.create(member=user, category=default_category)
-        return user
+        if user_type == 'normal':
+            password = validated_data.pop('password')
+            user_object = Member(**validated_data)
+            user_object.set_password(password)
+            user_object.save()
+        elif user_type == 'facebook':
+            access_key = validated_data.pop('access_key')
+            username = CheckSocialAccessToken.check_facebook(access_key)
+            if Member.objects.filter(username=username).exists():
+                raise customexception.ValidationException('이미 존재하는 계정입니다.')
+            user_object = Member(username=username, **validated_data)
+            user_object.save()
+        MemberCategory.objects.create(member=user_object, category=default_category)
+        return user_object
 
     def update(self, instance, validated_data):
         current_password = validated_data['current_password']
@@ -51,63 +73,42 @@ class UserViewSetSerializer(serializers.ModelSerializer):
         return user_object
 
 
-class FacebookUserSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(max_length=260, required=False,
-                                     validators=[UniqueValidator(queryset=Member.objects.all())])
-    password = serializers.CharField(required=False, write_only=True)
-    access_key = serializers.CharField(required=True, write_only=True)
+class UserLoginSerializer(serializers.Serializer):
+    USER_TYPE = (
+        ('normal', 'Normal'),
+        ('facebook', 'Facebook'),
+    )
+    username = serializers.EmailField(required=True, max_length=50)
+    password = serializers.CharField(required=True, min_length=8, write_only=True)
+    access_key = serializers.CharField(required=True, max_length=260)
+    user_type = serializers.ChoiceField(required=True, write_only=True, choices=USER_TYPE)
 
     class Meta:
-        model = Member
         fields = (
-            'id',
             'username',
             'password',
-            'user_type',
             'access_key',
-            'created_date',
+            'user_type'
         )
 
-    def create(self, validated_data):
-        access_token = validated_data['access_key']
-        username = CheckSocialAccessToken.check_facebook(access_token)
-        try:
-            user_object = Member(username=username, **validated_data)
-            user_object.save()
-        except IntegrityError:
-            raise customexception.ValidationException('해당 유저가 이미 존재합니다')
-        return user_object
-
-
-class NormalUserLoginSerializer(serializers.Serializer):
-    username = serializers.EmailField(required=True, max_length=50)
-    password = serializers.CharField(min_length=8, write_only=True, required=True)
-
-    class Meta:
-        fields = (
-            'username',
-            'password'
-        )
+    def __init__(self, *args, **kwargs):
+        user_type = kwargs.pop('user_type', 'normal')
+        fields = ('access_key',) if user_type == 'facebook' else ('username', 'password')
+        super(UserLoginSerializer, self).__init__(*args, **kwargs)
+        allow = set(fields)
+        existing = set(self.fields.keys())
+        for fields_name in existing - allow:
+            self.fields.pop(fields_name)
 
     def create(self, validated_data):
-        username = validated_data['username']
-        password = validated_data['password']
-        user_object = authenticate(username=username, password=password)
-        if user_object is None:
-            raise customexception.AuthenticateException('이메일 혹은 비밀번호를 확인해 주세요.')
-        return user_object
-
-
-class SocialUserLoginSerializer(serializers.Serializer):
-    access_key = serializers.CharField(max_length=260, write_only=True, required=True)
-
-    class Meta:
-        fields = (
-            'access_key',
-        )
-
-    def create(self, validated_data):
-        access_key = validated_data['access_key']
-        username = CheckSocialAccessToken.check_facebook(access_key)
-        user_object = Member.objects.get(username=username)
+        username = validated_data.pop('username', None)
+        password = validated_data.pop('password', None)
+        access_key = validated_data.pop('access_key', None)
+        if username and password:
+            user_object = authenticate(username=username, password=password)
+            if user_object is None:
+                raise customexception.AuthenticateException('이메일 혹은 비밀번호를 확인해 주세요.')
+        else:
+            username = CheckSocialAccessToken.check_facebook(access_key)
+            user_object = Member.objects.get(username=username)
         return user_object
