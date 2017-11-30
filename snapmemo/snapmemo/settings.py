@@ -5,6 +5,9 @@ using Django 1.11.6.
 import json
 import os
 
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = os.environ.get('MODE') == 'DEBUG'
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROOT_DIR = os.path.dirname(BASE_DIR)
@@ -12,13 +15,12 @@ ROOT_DIR = os.path.dirname(BASE_DIR)
 # config directory setting
 conf_dir = os.path.join(os.path.dirname(BASE_DIR), '.conf-secret')
 # common config file setting
-COMMON_CONF_FILE = json.loads(open(os.path.join(conf_dir, 'config-common.json')).read())
-
+if DEBUG:
+    COMMON_CONF_FILE = json.loads(open(os.path.join(conf_dir, 'config-common.json')).read())
+else:
+    COMMON_CONF_FILE = json.loads(open(os.path.join(conf_dir, 'config-deploy.json')).read())
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = COMMON_CONF_FILE['django']['secret-key']
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
 ALLOWED_HOSTS = COMMON_CONF_FILE['django']['allowed-host']
 
@@ -31,10 +33,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_extensions',
     'rest_framework',
     'rest_framework.authtoken',
     'rest_auth',
+    'storages',
     'user',
+    'memo'
 ]
 
 REST_FRAMEWORK = {
@@ -42,6 +47,36 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     )
 }
+
+# Send Email Settings
+EMAIL_BACKEND = COMMON_CONF_FILE['django']['email']['EMAIL_BACKEND']
+EMAIL_HOST = COMMON_CONF_FILE['django']['email']['EMAIL_HOST']
+EMAIL_HOST_USER = COMMON_CONF_FILE['django']['email']['EMAIL_HOST_USER']
+EMAIL_HOST_PASSWORD = COMMON_CONF_FILE['django']['email']['EMAIL_HOST_PASSWORD']
+EMAIL_PORT = COMMON_CONF_FILE['django']['email']['EMAIL_PORT']
+EMAIL_USE_TLS = COMMON_CONF_FILE['django']['email']['EMAIL_USE_TLS']
+DEFAULT_FROM_EMAIL = COMMON_CONF_FILE['django']['email']['DEFAULT_FROM_EMAIL']
+
+# S3 Settings
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+AWS_ACCESS_KEY_ID = COMMON_CONF_FILE['aws']['access-key-id']
+AWS_SECRET_ACCESS_KEY = COMMON_CONF_FILE['aws']['secret-access-key']
+AWS_STORAGE_BUCKET_NAME = 'pemo'
+MEDIAFILES_LOCATION = 'MEDIA_S3_DIR'
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=86400',
+}
+AWS_LOCATION = 'static'
+
+MEDIA_URL = 'https://%s/MEDIA_DIR/' % AWS_S3_CUSTOM_DOMAIN
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'snapmemo/static'),
+]
+STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, AWS_LOCATION)
+STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -52,6 +87,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# Media Settings
+MEDIA_ROOT = os.path.join(BASE_DIR, 'upload')
 
 ROOT_URLCONF = 'snapmemo.urls'
 
@@ -89,7 +127,7 @@ DATABASES = {
 
 # Password validation
 # https://docs.djangoproject.com/en/1.11/ref/settings/#auth-password-validators
-
+AUTH_USER_MODEL = 'user.Member'
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -116,7 +154,7 @@ USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = True
+USE_TZ = False
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.11/howto/static-files/
