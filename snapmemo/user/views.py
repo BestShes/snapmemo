@@ -17,6 +17,12 @@ class UserViewSet(ModelViewSet):
     lookup_field = 'id'
     permission_classes = (UserPermission,)
 
+    def list(self, request, *args, **kwargs):
+        user = request.user
+        queryset = Member.objects.get(id=user.id)
+        serializer = self.get_serializer(queryset)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     def get_serializer_class(self):
         action = self.action
         if action == 'login':
